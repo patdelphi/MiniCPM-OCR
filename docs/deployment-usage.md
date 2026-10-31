@@ -50,9 +50,19 @@ sdk/webui/data/                vllm.log / webui.log / jobs/ 解析历史
 
 ## 4. 启动
 
+Windows 上 git 默认 `core.autocrlf=true`，检出后所有 `.sh` 带 CRLF，直接 `bash` 会报 `$'\r': command not found` 或 `set: pipefail: invalid option name`。首次运行前统一一次行尾：
+
 ```bash
 wsl -d Ubuntu
 cd /mnt/d/Github/MiniCPM-OCR
+find sdk scripts tools -name '*.sh' -exec sed -i 's/\r$//' {} +
+```
+
+只清单个脚本会漏掉它调用的其他脚本。想免掉这一步，改成 `git config core.autocrlf input` 后重新检出。
+
+上面这条命令跑完，`git status` 会把一些 `.sh` 标成已修改，那是行尾差异、内容为空 diff（`git diff --numstat -- '*.sh'` 无输出可确认），仓库里存的本来就是 LF，不用提交也不用还原。
+
+```bash
 bash sdk/webui/scripts/start_vllm.sh      # 冷启动约 15 分钟
 bash sdk/webui/scripts/start_webui.sh     # 秒级
 ```
@@ -199,8 +209,8 @@ source sdk/scripts/demo_env.sh webui
 
 ## 10. 常见问题
 
-**脚本报 `set: pipefail: invalid option name`**
-Windows 检出带 CRLF。`sed -i 's/\r$//' sdk/webui/scripts/*.sh sdk/scripts/demo_env.sh`
+**脚本报 `set: pipefail: invalid option name` 或 `$'\r': command not found`**
+Windows 检出带 CRLF。按第 4 节整目录清理：`find sdk scripts tools -name '*.sh' -exec sed -i 's/\r$//' {} +`。仓库里存的是 LF，坏的只是本机检出的副本。
 
 **启动报 `unexpected keyword argument 'adaptive_tile_upsize'`**
 固定版本 vLLM 在视频预热时传了配套 transformers 不接受的参数。用 `--limit-mm-per-prompt '{"image":36,"video":0}'` 关掉视频输入，无需重编译。已在 `start_vllm.sh` 里设为默认。

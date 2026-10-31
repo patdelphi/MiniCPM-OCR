@@ -60,6 +60,8 @@ L5/L6 只处理约 190 块，且每块最多 5 次识别请求，比全文档开
 
 单独用 Jev 的口径要注意：`eval/score.py` 的输入 jsonl 每行必须给 `image_path`（原块裁图）、`render_image_path`（候选文本的渲染图）、`ocr_text`、`category` 四项，渲染图必须由 `rm_render.py` 的 KaTeX + Chromium 产出，自己拼 HTML 或用其它字体环境出图，分数含义就变了（同一份权重对渲染漂移敏感，见第 7 节）。
 
+三种模式的入口都是仓库里的 `.sh`。Windows 上 git 默认 `core.autocrlf=true`，检出即 CRLF，`bash` 会报 `$'\r': command not found`；跑任何一条之前先按 `docs/deployment-usage.md` 第 4 节整目录统一行尾。仓库里存的是 LF，坏的只是本机检出副本。
+
 联合在线模式下 L1~L6 由 SDK 原生 `tts` + `tts.adaptive` 完成，不需要外置脚本；只用 OCR 时 L3~L6 整段不发生，产物里没有逐块分数，质量门禁无从判起。
 
 ### 4.2 三条路线
