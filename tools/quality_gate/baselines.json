@@ -1,0 +1,61 @@
+{
+  "_comment": "同一输入在不同执行路径下测得的 prob_yes，供路线 A/B/C 互比。measured_on 均为本机 2026-10-30。published 取自各 example 的 case.json。",
+  "measured_on": "RTX 5070 Ti 12GB / Ryzen 9 9955HX, WSL2 Ubuntu",
+  "v1_score_with_bundled_render": {
+    "_note": "候选=ocr_output，渲染图用材料自带 reference_render.png，只走前向，不含本机制图与 precheck",
+    "01_text_putnam": {
+      "published": 0.00702,
+      "gpu_engine_18502": 0.00234,
+      "cpu_hf_forward": 0.00243,
+      "cpu_engine_18503": 0.00243
+    },
+    "02_formula_putnam": {
+      "published": 0.96552,
+      "gpu_engine_18502": 0.96525,
+      "cpu_hf_forward": null,
+      "cpu_engine_18503": 0.96641
+    },
+    "03_table_gb_standard": {
+      "published": 0.00116,
+      "gpu_engine_18502": 0.00096,
+      "cpu_hf_forward": 0.00099,
+      "cpu_engine_18503": 0.00099
+    }
+  },
+  "rm_score_best_end_to_end": {
+    "_note": "ground_truth 候选，渲染由本机 Chromium 完成；best_index 应指向 ground_truth",
+    "01_text_putnam": {
+      "published": 0.99501,
+      "gpu_engine_18502": 0.99515,
+      "cpu_engine_18503": null
+    },
+    "02_formula_putnam": {
+      "published": 0.96813,
+      "gpu_engine_18502": 0.97138,
+      "cpu_engine_18503": null
+    },
+    "03_table_gb_standard": {
+      "published": 0.04075,
+      "gpu_engine_18502": 0.05422,
+      "cpu_engine_18503": null
+    }
+  },
+  "cpu_forward_latency_single_stream": {
+    "_note": "torch 16 线程，OCR 引擎同时在 GPU 上运行，未与 Chromium 抢核",
+    "tokens_304_sec": 0.78,
+    "tokens_590_sec": 2.02,
+    "batch4_no_gain_sec_per_item": 0.87
+  },
+  "whole_document": {
+    "_note": "AI Scientist的现在和未来.pdf，57 页 / 517 版面块 / 448 个含文本块",
+    "parse_gpu_sec": 47.85,
+    "score_gpu_sec": 137.7,
+    "score_gpu_blocks_per_sec": 3.3,
+    "median_prob_yes": 0.954,
+    "mean_prob_yes": 0.739,
+    "below_0_5_blocks": 103,
+    "below_0_9_blocks": 190,
+    "score_cpu_sec": null
+  },
+  "_updated": "2026-10-30 追加 cpu_engine_18503（16 线程单飞 shim）"
+}

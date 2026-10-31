@@ -10,6 +10,8 @@ PORT="${VLLM_PORT:-18499}"
 SERVED="${VLLM_SERVED_NAME:-minicpm-ocr}"
 GPU_UTIL="${VLLM_GPU_UTIL:-0.60}"
 MAX_LEN="${VLLM_MAX_MODEL_LEN:-16384}"
+# 固定版本的 vLLM 在视频预热时会传入配套 transformers 不接受的参数，文档解析只需图片，故显式关闭视频。
+LIMIT_MM="${VLLM_LIMIT_MM:-{\"image\":36,\"video\":0}}"
 LOG="${VLLM_LOG:-$(dirname "$0")/../data/vllm.log}"
 
 [[ -x "$VLLM_PY" ]] || { echo "vLLM python not found: $VLLM_PY" >&2; exit 1; }
@@ -37,12 +39,12 @@ nohup "$VLLM_PY" -m vllm.entrypoints.openai.api_server \
   --host 0.0.0.0 --port "$PORT" \
   --gpu-memory-utilization "$GPU_UTIL" \
   --max-model-len "$MAX_LEN" \
-  --limit-mm-per-prompt '{"image":1}' \
+  --limit-mm-per-prompt "$LIMIT_MM" \
   --trust-request-mm-kwargs \
   >"$LOG" 2>&1 &
 
-echo "pid=$! ; waiting for readiness (up to 600s)"
-for _ in $(seq 1 200); do
+echo "pid=$! ; waiting for readiness (up to 1500s)"
+for _ in $(seq 1 500); do
   if curl -s --noproxy '*' -m 3 "http://127.0.0.1:$PORT/v1/models" >/dev/null 2>&1; then
     echo "READY  http://127.0.0.1:$PORT  (served-model-name=$SERVED)"
     exit 0

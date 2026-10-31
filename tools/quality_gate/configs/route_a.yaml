@@ -1,0 +1,73 @@
+# 路线 A 的解析配置：OCR 引擎与 Jev 判别引擎两个 vLLM 同卡共存（18499 / 18502），判别经 18500 渲染打分服务
+#
+# 与 route_c.yaml 的唯一区别是判别后端在 GPU：质量参数（tts.adaptive 三轮、tau 0.90、采样）原样保留。
+# 相对路径按本文件所在目录解析，所以 run_root 指回仓库的 runs/。
+run:
+  run_root: ../../../runs
+  mode: full
+
+engine:
+  type: vllm
+  model_name: ${OCR_SERVED_NAME:-minicpm-ocr}
+  server_url: ${VLLM_URL:-http://127.0.0.1:18499}
+  # 放大裁图的块会被 vLLM 以 400 拒掉（超出上下文）。这类 400 重试多少次都一样，
+  # 但 SDK 的重试闸门会一路重试到 request_ready_timeout_sec 才放弃，所以压到 120 秒。
+  request_ready_timeout_sec: 120
+  request_retry_interval_sec: 1
+
+layout:
+  enabled: true
+  provider: ppdoclayout3_paddlex
+  # DEFAULT_CONFIG 里这一项是空的，SDK 会直接报 layout.model_dir is required
+  model_dir: ${OCR_LAYOUT_MODEL_DIR}
+  device: ${OCR_LAYOUT_DEVICE:-cuda}
+
+pipeline:
+  # 复核清单要按块引用裁图，必须落盘
+  save_crops: true
+  save_pages: true
+  # 与路线 C 的 full4 保持同样的槽位数，墙钟差才只反映后端差别
+  max_workers: 16
+
+tts:
+  enabled: true
+  rm_url: ${JEV_RM_URL:-http://127.0.0.1:18500}
+  # 三元输入：原块图 + 候选文本 + 渲染图。缺一项分数含义就变了，所以必填
+  rm_input_form: ternary
+  # GPU 判别单条 0.3 秒量级，一轮 5 个候选用不到 CPU 那种 900 秒
+  timeout_sec: 300
+  fallback_to_greedy: true
+  dump_candidates: true
+  # tts.sampling 是覆盖式的：漏一个键就静默继承 decode 段的贪心值（top_k=1），
+  # 采出来的候选与贪心逐字相同，SDK 会直接拒绝启动
+  sampling:
+    n: 4
+    temperature: 0.7
+    top_p: 0.8
+    top_k: 20
+    min_p: 0.0
+  rm_batch:
+    max_items: 4
+    max_wait_ms: 50
+  adaptive:
+    enabled: true
+    # 首轮达标就走，不浪费后续轮
+    tau: 0.90
+    n_max: 3
+    rounds:
+      # 第 1 轮必须是贪心单候选（SDK 校验如此，也是机检公共前缀的前提）
+      - greedy: true
+      # 第 2 轮：裁图放大 2 倍后采样，专治小字与密排
+      - n: 4
+        scale: 2.0
+        temperature: 0.7
+        top_p: 0.8
+        top_k: 20
+        min_p: 0.0
+      # 第 3 轮：原尺度换种子换温度再采，覆盖放大也救不了的块
+      - n: 4
+        scale: 1.0
+        temperature: 0.9
+        top_p: 0.9
+        top_k: 40
+        min_p: 0.05
